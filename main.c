@@ -36,42 +36,46 @@ void io_init(void) {
 }
 
 void temp_init(void) {
-// 	ADC10CTL0 |= ADC10SHT_2 + ADC10ON;        // ADC10ON, S&H=16 ADC clks
-// 	ADC10CTL1 |= ADC10SHP;                    // ADCCLK = MODOSC; sampling timer
-// 	ADC10CTL2 |= ADC10RES;                    // 10-bit conversion results
-// 	ADC10MCTL0 |= ADC10INCH_13;                // A1 ADC input select; Vref=AVCC
-// 	ADC10IE |= ADC10IE0;                      // Enable ADC conv complete interrupt
+	ADC10CTL0 = 0;
+	ADC10CTL1 = 0;
 	
-	ADC10CTL0 = SREF_1 + ADC10SHT_3 + REFON + REFOUT + ADC10ON + ADC10IE;
-	ADC10CTL1 = INCH_10 + ADC10DIV_7;
-	//set_bit(ADC10AE0,4);
+	ADC10CTL1 |= INCH_10; //temperature channel
+	ADC10CTL1 |= ADC10DIV_7; //8x clock divider
+	
+	ADC10CTL0 |= SREF_1; //voltage reference
+	ADC10CTL0 |= ADC10SHT_3; //64x sample & hold
+	ADC10CTL0 |= REFON; //enable reference
+	ADC10CTL0 |= ADC10ON; //enable adc
+	ADC10CTL0 |= ADC10IE; //enable ADC conversion complete interrupt
 }
 
 int main(void) {
+	unsigned int ADC_Result;
+	
 	chip_init();
 	io_init();
 	temp_init();
-	
+	usci0.init();
 	set_bit(P1OUT,LED_G);
 	
-	unsigned int ADC_Result;
-	
-	usci0.init();
 	while(1) {
+		//wait until computer asks for temperature
 		usci0.recv();
-		set_bit(P1OUT,LED_R);
 		
-		//ADC_Result=100;
+		set_bit(P1OUT,LED_R); //turn on red led
+		ADC10CTL0 |= (ENC | ADC10SC); //begin ADC conversion
+		__bis_SR_register(LPM0_bits + GIE); //sleep until conversion complete
 		
-		//ADC10CTL0 |= ADC10ENC + ADC10SC;        // Sampling and conversion start
-		ADC10CTL0 |= ENC + ADC10SC;
+		ADC_Result = ADC10MEM; //
+		clear_bit(P1OUT,LED_R); //turn off red led
 		
-		while (ADC10CTL1 & BUSY);
-		//__delay_ms(100);
-		clear_bit(P1OUT,LED_R);
-		ADC_Result = ADC10MEM;
-		
+		//reply to the computer
 		usci0.xmit(ADC_Result/256);
 		usci0.xmit(ADC_Result%256);
 	}
+}
+
+void __attribute__((interrupt (ADC10_VECTOR))) adc_complete(void)
+{
+    __bic_SR_register_on_exit(LPM0_bits); //Wakeup main code
 }
