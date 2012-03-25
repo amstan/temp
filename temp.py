@@ -53,15 +53,12 @@ class Temp():
 if __name__=="__main__":
 	import time,sys
 	
-	try:
-		temp=Temp(sys.argv[1])
-		print "Reading as fast as we can from %r, and printing temps every time the averaging buffer gets cycled(%d times)." % (temp,temp.HISTORYSIZE)
-		while 1:
-			try:
-				for _ in range(temp.HISTORYSIZE):
-					temp.read()
-				print repr(temp)
-			except Exception as e:
-				print repr(e)
-	except KeyboardInterrupt:
-		Temp.serial.close()
+	temp=Temp(sys.argv[1])
+	print "Reading as fast as we can from %r, and printing temps every time the averaging buffer gets cycled(%d times)." % (temp,temp.HISTORYSIZE)
+	while 1:
+		try:
+			for _ in range(temp.HISTORYSIZE):
+				temp.read()
+			print repr(temp)
+		except Exception as e:
+			print repr(e)
