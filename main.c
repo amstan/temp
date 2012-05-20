@@ -50,7 +50,6 @@ void temp_init(void) {
 }
 
 int main(void) {
-	unsigned int ADC_Result;
 	
 	chip_init();
 	io_init();
@@ -63,15 +62,26 @@ int main(void) {
 		usci0.recv();
 		
 		set_bit(P1OUT,LED_R); //turn on red led
-		ADC10CTL0 |= (ENC | ADC10SC); //begin ADC conversion
-		__bis_SR_register(LPM0_bits + GIE); //sleep until conversion complete
 		
-		ADC_Result = ADC10MEM; //
+		unsigned int average=0; //16 bit
+		#define AVERAGECOUNT 128
+		for(unsigned int i = 0; i<AVERAGECOUNT; i++) {
+			ADC10CTL0 |= (ENC | ADC10SC); //begin ADC conversion
+			__bis_SR_register(LPM2_bits + GIE); //sleep until conversion complete
+			
+			unsigned int ADC_Result;
+			ADC_Result = ADC10MEM;
+			ADC_Result -= 512; //we don't care about those values(under -65C), so ADC_Result is now essentially 9 bit
+			average += ADC10MEM;
+			
+			__delay_cycles(100);
+		}
+		
 		clear_bit(P1OUT,LED_R); //turn off red led
 		
 		//reply to the computer
-		usci0.xmit(ADC_Result/256);
-		usci0.xmit(ADC_Result%256);
+		usci0.xmit(average/256);
+		usci0.xmit(average%256);
 	}
 }
 

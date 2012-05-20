@@ -4,7 +4,7 @@ import serial
 
 class Temp():
 	_history=[0.0]
-	HISTORYSIZE=2**9
+	HISTORYSIZE=128
 	
 	def __init__(self,port="/dev/ttyACM0"):
 		self.port=port
@@ -30,10 +30,12 @@ class Temp():
 			
 			#read and parse the data to an 16 bit int
 			data=map(ord,self.serial.read(2))
+			#print data
 			data=data[0]*256+data[1]
 			
 			#convert the data to deg C
-			temp=((data - 673.0) * 423) / 1024
+			temp=((data/128.0 - (673.0-512)) * 423) / 1024
+			#temp=data
 			
 			#add the data to the history
 			self._history.append(temp)
@@ -45,7 +47,7 @@ class Temp():
 	
 	def __str__(self):
 		"""Returns nicely formatted temperature."""
-		return "%2.2f°C" % self.temp
+		return "%2.2f*C" % self.temp
 	
 	def __repr__(self):
 		return "Temp Mon<%s>: %s" % (self.port, self)
@@ -59,6 +61,7 @@ if __name__=="__main__":
 		try:
 			for _ in range(temp.HISTORYSIZE):
 				temp.read()
+				#time.sleep(0.5)
 			print repr(temp)
 		except Exception as e:
 			print repr(e)
